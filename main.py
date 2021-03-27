@@ -53,7 +53,7 @@ if CELLS <= 10:
 
 init = f'cells = [0]*{CELLS}; ptr = 0'
 
-signature = '# Compiled with bfpc\n'
+signature = '# Compiled with bfpc\n# https://github.com/umanochiocciola/brainfuck-to-python\n'
 
 BuildBuff += signature + '\n'.join(funcs) + '\n' + init + '\n'
 
