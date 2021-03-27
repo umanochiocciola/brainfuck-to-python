@@ -9,7 +9,7 @@ def GetSource():
         print('usage:\nmain.py <source> [cells]'); exit(1)
     
     if len(argv) > 2:
-        cells = argv[2]
+        cells = int(argv[2])
     else:
         cells = 30000
     
