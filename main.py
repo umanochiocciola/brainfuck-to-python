@@ -1,86 +1,88 @@
+# BrainFuck compiler to python
+# by umanochiocciola
+#
+
 from sys import argv
 
-if len(argv) < 2:
-    print("missing file argument"); exit(1)
-
-try:
-    with open(argv[1], 'r') as f:
-        program = f.read()
-except:
-    print("no such file"); exit(1)
-
-def debug(txt, typ='info'):
-    print(f'[{typ}] {txt}')
-
-try:
-    cells = int(argv[2])
-except:
-    cells = 16
-    debug('using deafult tape len (16) because not specified', 'note')
-
-debug('-- BBWB Compiler started --')
-debug('setting up')
-
-funcs = {
-    'def p():\n\tglobal buff\n\tbuff += 1\n\tif buff > 255: buff = 0':              '+',
-    'def m():\n\tglobal buff\n\tbuff -= 1\n\tif buff < 0: buff = 255':              '-',
-    'def w():\n\tglobal buff, ptr, tape\n\ttape[ptr] = buff':                       '^',
-    'def r():\n\tglobal buff, ptr, tape\n\tbuff = tape[ptr]':                       'v',
-    f'def d():\n\tglobal buff, ptr, tape\n\tptr = ptr-1 if ptr > 0 else {cells-1}':   '<',
-    f'def i():\n\tglobal buff, ptr, tape\n\tptr = ptr+1 if ptr+1 < {cells} else 0': '>',
-    'def dt():\n\tglobal buff, ptr, tape\n\tprint(buff, end="", flush=True)':       '.',
-    'def cl():\n\tglobal buff, ptr, tape\n\tprint(chr(buff), end="", flush=True)':  ':',
-    'def cm():\n\tglobal buff, ptr, tape\n\tbuff = int(input("i> "))':              ',',
-    'def sc():\n\tglobal buff, ptr, tape\n\tbuff = ord(input("c> "))':           ';'
-}
-
-debug('initializing')
-
-signature = '# transpiled to python with BBWBC\n# https://github.com/umanochiocciola/bbwb\n'
-init = f'\ntape = [0]*{cells}\nptr = 0\nbuff = 0\n'
-
-OUTPUT = signature
-for i  in funcs:               # if a program doesn't use a command, why would you include it?
-    if funcs[i] in program:
-        OUTPUT += i + '\n'
-
-OUTPUT += init
+def GetSource():
+    if len(argv) < 2:
+        print('usage:\nmain.py <source> [cells]'); exit(1)
     
+    if len(argv) > 2:
+        cells = argv[2]
+    else:
+        cells = 30000
+    
+    try:
+        with open(argv[1], 'r') as f:
+            return f.read(), cells
+    except:
+        print('no such file'); exit(1)
+
+
+def debug(msg, typ='info'):
+    print (f'[{typ}] {msg}' )
+    
+
+debug('loading functions')
+
+funcs = [
+    "def r():\n    global ptr, cells\n    ptr += 1\n    if ptr >= len(cells):\n        ptr = 0",
+    "def l():\n    global ptr, cells\n    ptr -= 1\n    if ptr < 0:\n        ptr = len(cells)-1",
+    "def p():\n    global ptr, cells\n    cells[ptr] += 1\n    if cells[ptr] > 255:\n        cells[ptr] = 0",
+    "def m():\n    global ptr, cells\n    cells[ptr] -= 1\n    if cells[ptr] < 0:\n        cells[ptr] = 255",
+    "def d():\n    global ptr, cells\n    print(chr(cells[ptr]), end='') if cells[ptr] > 9 else print(cells[ptr], end='')",
+    "def c():\n    global ptr, cells\n    newch = input('>')\n    if newch: cells[ptr] = ord(newch[0])"
+]
 
 debug('creating references')
 
-repls = {
+replacer = {
+    '>': 'r()',
+    '<': 'l()',
     '+': 'p()',
     '-': 'm()',
-    '#': 'buff = 0',
-    '^': 'w()',
-    'v': 'r()',
-    '<': 'd()',
-    '>': 'i()',
-    '.': 'dt()',
-    ':': 'cl()',
-    ',': 'cm()',
-    ';': 'sc()',
-    '[': '\nwhile tape[ptr]:',
-    '@': 'print(tape, ptr, buff)'
+    '.': 'd()',
+    ',': 'c()'
 }
+
+BuildBuff = ''
+progr, CELLS = GetSource()
+if CELLS <= 10:
+    debug('using few cells is not suggested, it saves little memory and makes your life more difficult :P', 'note')
+
+init = f'cells = [0]*{CELLS}; ptr = 0'
+
+signature = '# Compiled with bfpc\n# https://github.com/umanochiocciola/brainfuck-to-python\n'
+
+BuildBuff += signature + '\n'.join(funcs) + '\n' + init + '\n'
 
 debug('compiling')
 
-loops = 0
-for ch in program:
+INDENT = ''
+i = -1
+for ch in progr:
+    i += 1
+    if ch == '[':
+        BuildBuff += INDENT+'while cells[ptr]:\n'
+        INDENT += '\t'
+        
+    elif ch == ']':
+        INDENT = '\t'*(INDENT.count('\t')-1)
     
-    if ch == ']': OUTPUT = OUTPUT[:-1] + '\n'# we need to remove last ";"
-    if not (ch in repls): continue
-    
-    OUTPUT += repls[ch]+';'
-    if ch == '[': OUTPUT = OUTPUT[:-1]       # obviously we can't have "while:;"
+    else:
+        try:
+            BuildBuff += INDENT+replacer[ch]+'\n'
+        except:
+            if ch != '\n' and ch != '':
+                debug(f'character {i}: unknown command: {ch}', 'error')
 
-OUTPUT += '0'
 
-debug('writing to out.py')
+if INDENT != '':
+    debug('last loop not properly closed. Even if this works on python, it won\'t work on other compilers.', 'warn')
 
+debug('writing file')
 with open('out.py', 'w') as f:
-    f.write(OUTPUT)
+    f.write(BuildBuff)
 
-debug('done!')
+debug('Done!')
