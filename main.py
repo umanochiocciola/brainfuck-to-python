@@ -32,7 +32,7 @@ funcs = [
     "def p():\n    global ptr, cells\n    cells[ptr] += 1\n    if cells[ptr] > 255:\n        cells[ptr] = 0",
     "def m():\n    global ptr, cells\n    cells[ptr] -= 1\n    if cells[ptr] < 0:\n        cells[ptr] = 255",
     "def d():\n    global ptr, cells\n    print(chr(cells[ptr]), end='') if cells[ptr] > 9 else print(cells[ptr], end='')",
-    "def c():\n    global ptr, cells\n    newch = input('>')\n    if newch: cells[ptr] = ord(newch[0])"
+    "def c():\n    global ptr, cells\n    newch = sys.stdin.read(1)\n    if newch: cells[ptr] = ord(newch[0])"
 ]
 
 debug('creating references')
